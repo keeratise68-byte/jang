@@ -1,0 +1,1421 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Server Panic! ห้องจัดการข้อมูลอลวน - วิทยาการคำนวณ ม.1</title>
+    <!-- Google Fonts: Kanit & Sarabun -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;700;800;900&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        kanit: ['Kanit', 'sans-serif'],
+                        sarabun: ['Sarabun', 'sans-serif'],
+                    },
+                    colors: {
+                        lab: {
+                            wall: '#cbd5e1',
+                            floor: '#f8fafc',
+                            fileA: '#0284c7',
+                            fileB: '#9333ea',
+                            scan: '#4f46e5',
+                            encrypt: '#7c3aed',
+                            deliver: '#059669',
+                            fire: '#e11d48'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #0f172a;
+            color: #1e293b;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Kanit', sans-serif;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+
+        @keyframes pulse-alarm {
+            0%, 100% { box-shadow: inset 0 0 30px rgba(225, 29, 72, 0.2); }
+            50% { box-shadow: inset 0 0 60px rgba(225, 29, 72, 0.6); }
+        }
+
+        .alarm-active {
+            animation: pulse-alarm 0.8s infinite;
+        }
+
+        .badge-step {
+            font-family: 'Kanit', sans-serif;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body class="h-screen max-h-screen overflow-hidden flex flex-col justify-between select-none bg-slate-900">
+
+    <!-- PERMANENT HUD & QUICK BAR TOP -->
+    <header id="top-hud" class="w-full bg-slate-800/95 border-b-2 border-indigo-500/30 text-white px-3 py-2 z-20 shadow-lg flex-shrink-0">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+            
+            <!-- Game Title & Level Badge -->
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-r from-cyan-500 to-indigo-600 px-3 py-1 rounded-xl shadow font-heading font-extrabold text-sm md:text-base tracking-wide flex items-center gap-2">
+                    <i class="fa-solid fa-server text-yellow-300"></i>
+                    <span>Server Panic!</span>
+                </div>
+                <div id="hud-level-badge" class="bg-slate-700 border border-slate-600 px-2.5 py-1 rounded-lg text-xs font-heading font-semibold text-cyan-300">
+                    ด่าน 1: เรียนรู้สายการผลิต
+                </div>
+            </div>
+
+            <!-- 4-Step Workflow Quick Guide -->
+            <div class="hidden lg:flex items-center gap-1.5 text-xs bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-700/60">
+                <span class="text-slate-400 font-semibold mr-1"><i class="fa-solid fa-diagram-project text-indigo-400"></i> ลำดับงาน (Decomposition):</span>
+                <span class="badge-step bg-sky-950 text-sky-300 border border-sky-700">1. หยิบดิบ</span> ➔
+                <span class="badge-step bg-indigo-950 text-indigo-300 border border-indigo-700">2. สแกน</span> ➔
+                <span class="badge-step bg-purple-950 text-purple-300 border border-purple-700">3. ผูกรหัส</span> ➔
+                <span class="badge-step bg-emerald-950 text-emerald-300 border border-emerald-700">4. ส่งมอบ</span>
+            </div>
+
+            <!-- Stats & Counters -->
+            <div class="flex items-center gap-2 sm:gap-4 text-xs md:text-sm">
+                <!-- Score -->
+                <div class="flex items-center gap-1.5 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700">
+                    <i class="fa-solid fa-star text-amber-400"></i>
+                    <span class="text-slate-400 hidden sm:inline">คะแนน:</span>
+                    <span id="hud-score" class="font-heading font-bold text-amber-300 text-base">0</span>
+                </div>
+
+                <!-- Deliveries / Target -->
+                <div class="flex items-center gap-1.5 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700">
+                    <i class="fa-solid fa-box-archive text-emerald-400"></i>
+                    <span class="text-slate-400 hidden sm:inline">ส่งมอบ:</span>
+                    <span id="hud-target" class="font-heading font-bold text-emerald-300 text-base">0/3</span>
+                </div>
+
+                <!-- Server Heat Meter -->
+                <div class="flex items-center gap-2 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-slate-700 min-w-[120px]">
+                    <i id="heat-icon" class="fa-solid fa-temperature-half text-cyan-400"></i>
+                    <div class="flex-1">
+                        <div class="w-full bg-slate-700 h-2 rounded-full overflow-hidden">
+                            <div id="hud-heat-bar" class="bg-cyan-400 h-full w-0 transition-all duration-300"></div>
+                        </div>
+                    </div>
+                    <span id="hud-heat-val" class="font-heading font-bold text-xs text-cyan-300">0%</span>
+                </div>
+
+                <!-- Pause & Mute Buttons -->
+                <button id="btn-sound" onclick="toggleSound()" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition">
+                    <i id="sound-icon" class="fa-solid fa-volume-high text-xs"></i>
+                </button>
+                <button id="btn-pause" onclick="togglePause()" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-slate-200 transition">
+                    <i class="fa-solid fa-pause text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA (Single Screen Fit) -->
+    <main class="flex-1 w-full relative flex flex-col md:flex-row items-stretch justify-center bg-slate-950 overflow-hidden">
+        
+        <!-- CANVAS GAME VIEWPORT -->
+        <div id="canvas-container" class="relative flex-1 flex items-center justify-center p-1 md:p-3 bg-slate-950">
+            <canvas id="gameCanvas" width="900" height="560" class="max-w-full max-h-full rounded-2xl shadow-2xl border-2 border-slate-700/80 bg-slate-100 object-contain"></canvas>
+
+            <!-- FLOATING ACTION NOTIFICATION BUBBLE OVERLAY -->
+            <div id="float-msg" class="absolute top-6 left-1/2 -translate-x-1/2 pointer-events-none transition-all duration-300 opacity-0 transform -translate-y-2 z-10">
+                <div class="bg-slate-900/95 text-white px-4 py-2 rounded-2xl border-2 border-amber-400 shadow-xl font-heading text-sm flex items-center gap-2">
+                    <i id="float-msg-icon" class="fa-solid fa-circle-info text-amber-400"></i>
+                    <span id="float-msg-text">ข้อความแจ้งเตือน</span>
+                </div>
+            </div>
+
+            <!-- ON-SCREEN TOUCH CONTROL HELP BUTTON (Drop Button) -->
+            <div class="absolute bottom-4 right-4 z-10 flex gap-2">
+                <button onclick="handleDropAction()" class="bg-red-500/90 hover:bg-red-600 active:scale-95 text-white font-heading font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-lg border border-red-300 flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-box-open"></i>
+                    <span>📦 วางของลงพื้น (กด T)</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDEBAR: ORDERS & CS CONCEPTS HUD -->
+        <aside class="w-full md:w-80 bg-slate-900/95 border-t md:border-t-0 md:border-l border-slate-800 p-3 flex flex-col justify-between gap-3 text-white flex-shrink-0 z-10">
+            
+            <!-- Ticket Orders Queue -->
+            <div class="flex-1 flex flex-col min-h-0">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800 mb-2">
+                    <h3 class="font-heading font-bold text-sm text-cyan-300 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-indigo-400"></i>
+                        <span>คิวคำขอข้อมูล (Data Tickets)</span>
+                    </h3>
+                    <span id="ticket-count" class="bg-slate-800 text-slate-300 text-xs px-2 py-0.5 rounded-full font-bold">0 Active</span>
+                </div>
+
+                <!-- Scrollable Tickets Container -->
+                <div id="tickets-container" class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar min-h-[120px]">
+                    <!-- Ticket Items dynamically rendered here -->
+                </div>
+            </div>
+
+            <!-- Educational CS Concept Live Reminder Box -->
+            <div class="bg-slate-800/80 rounded-xl p-3 border border-indigo-500/30 text-xs space-y-1.5">
+                <div class="font-heading font-bold text-indigo-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-brain text-amber-400"></i>
+                    <span>แนวคิดเชิงคำนวณที่ใช้อยู่ (CS Concept)</span>
+                </div>
+                <div id="cs-live-tip" class="text-slate-300 leading-relaxed font-sarabun">
+                    • <b>Decomposition:</b> ทำงานตามลำดับ 4 ขั้นตอนห้ามข้ามสเต็ป<br>
+                    • <b>Pattern:</b> แฟ้ม A (สีฟ้า) และ B (สีม่วง) ใช้สายงานร่วมกัน
+                </div>
+            </div>
+
+            <!-- Controls Helper Footer -->
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-[11px] text-slate-400 space-y-1">
+                <div class="font-bold text-slate-300 mb-1 flex justify-between">
+                    <span><i class="fa-solid fa-keyboard text-cyan-400"></i> ปุ่มควบคุม:</span>
+                    <span class="text-xs text-amber-400">รองรับภาษาไทย</span>
+                </div>
+                <div class="grid grid-cols-2 gap-x-2 gap-y-0.5">
+                    <div><b>เดิน:</b> W,A,S,D / ลูกศร</div>
+                    <div><b>โต้ตอบ:</b> Spacebar / E</div>
+                    <div><b>วางของลงพื้น:</b> T / Q / X</div>
+                    <div><b>ดับเพลิง:</b> ถือ 🧯 + Spacebar</div>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- MODALS & OVERLAYS SYSTEM -->
+
+    <!-- START GAME MODAL -->
+    <div id="modal-start" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border-2 border-indigo-500/50 rounded-3xl p-6 max-w-xl w-full text-white shadow-2xl space-y-5">
+            <div class="text-center space-y-2">
+                <div class="inline-block p-3 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-2xl shadow-lg mb-1">
+                    <i class="fa-solid fa-server text-4xl text-white"></i>
+                </div>
+                <h1 class="font-heading text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-amber-300">
+                    Server Panic! ห้องจัดการข้อมูลอลวน
+                </h1>
+                <p class="text-xs md:text-sm text-slate-400">วิชาวิทยาการคำนวณ ชั้น ม.1 (หน่วยที่ 1: แนวคิดเชิงคำนวณ)</p>
+            </div>
+
+            <!-- Rules & Decomposition Guide -->
+            <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-3 text-xs md:text-sm">
+                <h4 class="font-heading font-bold text-cyan-300 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                    <span>ลำดับขั้นตอนการประมวลผลข้อมูล (4 ขั้นตอน)</span>
+                </h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-slate-900 p-2 rounded-xl border border-sky-800/60">
+                        <span class="text-sky-400 font-bold block">1. หยิบแฟ้มดิบ 📂</span>
+                        <span class="text-slate-400 text-[11px]">หยิบจากแท่นแฟ้ม A หรือ B</span>
+                    </div>
+                    <div class="bg-slate-900 p-2 rounded-xl border border-indigo-800/60">
+                        <span class="text-indigo-400 font-bold block">2. สแกนคัดกรอง 🔍</span>
+                        <span class="text-slate-400 text-[11px]">วางบนโต๊ะสแกนกลางห้อง</span>
+                    </div>
+                    <div class="bg-slate-900 p-2 rounded-xl border border-purple-800/60">
+                        <span class="text-purple-400 font-bold block">3. ผูกรหัสความปลอดภัย 🔐</span>
+                        <span class="text-slate-400 text-[11px]">วางบนโต๊ะผูกรหัสซ้ายมือ</span>
+                    </div>
+                    <div class="bg-slate-900 p-2 rounded-xl border border-emerald-800/60">
+                        <span class="text-emerald-400 font-bold block">4. ส่งมอบงาน 🚀</span>
+                        <span class="text-slate-400 text-[11px]">ส่งมอบที่โต๊ะส่งงานขวามือ</span>
+                    </div>
+                </div>
+                <p class="text-amber-300/90 text-xs">
+                    ⚠️ <b>คำเตือน:</b> หากเซิร์ฟเวอร์เกิดความร้อนสูง (Overheat) ต้องสลับลำดับความคิด (Priority Logic) นำถังดับเพลิง 🧯 ไปฉีดดับไฟก่อนระเบิด!
+                </p>
+            </div>
+
+            <button onclick="startLevel(1)" class="w-full py-3.5 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 active:scale-98 text-white font-heading font-extrabold text-base md:text-lg rounded-2xl shadow-xl border border-cyan-300 transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-play"></i>
+                <span>เริ่มภารกิจ ด่านที่ 1</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- LEVEL SUCCESS / STAGE COMPLETE MODAL -->
+    <div id="modal-success" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border-2 border-emerald-500/60 rounded-3xl p-6 max-w-lg w-full text-white shadow-2xl space-y-4 text-center">
+            <div class="inline-block p-3 bg-emerald-500/20 text-emerald-400 rounded-full border border-emerald-500/40 text-4xl mb-1">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 id="success-title" class="font-heading text-2xl font-extrabold text-emerald-300">ผ่านภารกิจสำเร็จ!</h2>
+            <p id="success-subtitle" class="text-xs text-slate-300">คุณสามารถจัดการข้อมูลตามลำดับได้อย่างแม่นยำ</p>
+
+            <!-- CS Reflection Summary Card -->
+            <div class="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-left space-y-2 text-xs">
+                <h4 class="font-heading font-bold text-amber-300 flex items-center gap-2">
+                    <i class="fa-solid fa-lightbulb"></i>
+                    <span>สรุปการเรียนรู้แนวคิดเชิงคำนวณ (CS Concept Reflection)</span>
+                </h4>
+                <div id="success-cs-body" class="text-slate-300 space-y-1 font-sarabun leading-relaxed">
+                    <!-- Dynamic CS reflection content -->
+                </div>
+            </div>
+
+            <button id="btn-next-level" onclick="nextLevelAction()" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-heading font-bold text-base rounded-2xl shadow-lg border border-emerald-300 transition">
+                ไปด่านถัดไป ➔
+            </button>
+        </div>
+    </div>
+
+    <!-- PAUSE MODAL -->
+    <div id="modal-pause" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-sm w-full text-white shadow-2xl text-center space-y-4">
+            <div class="text-3xl text-amber-400"><i class="fa-solid fa-circle-pause"></i></div>
+            <h2 class="font-heading text-xl font-bold">หยุดเกมชั่วคราว</h2>
+            <div class="space-y-2">
+                <button onclick="togglePause()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-heading font-bold text-sm transition">
+                    เล่นต่อ
+                </button>
+                <button onclick="restartCurrentLevel()" class="w-full py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl font-heading font-bold text-sm transition text-slate-300">
+                    เริ่มด่านนี้ใหม่
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME OVER / FAILURE MODAL -->
+    <div id="modal-failed" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border-2 border-rose-500/60 rounded-3xl p-6 max-w-md w-full text-white shadow-2xl text-center space-y-4">
+            <div class="text-4xl text-rose-500"><i class="fa-solid fa-triangle-exclamation"></i></div>
+            <h2 class="font-heading text-2xl font-extrabold text-rose-400">เกิดข้อผิดพลาดร้ายแรง!</h2>
+            <p id="fail-reason" class="text-xs text-slate-300">เซิร์ฟเวอร์เกิดการระเบิดเนื่องจากความร้อนสะสมสะสมสูงเกินไป</p>
+
+            <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700 text-left text-xs text-slate-300 space-y-1">
+                <span class="font-bold text-amber-300 block">💡 ข้อแนะนำด้านอัลกอริทึม:</span>
+                <p>เมื่อเกิดเหตุฉุกเฉิน ต้องหยุดงานปกติ วางแฟ้มลงพื้น แล้วจัดลำดับงานฉุกเฉิน (Priority) วิ่งไปหยิบถังดับเพลิงก่อนเสมอ!</p>
+            </div>
+
+            <button onclick="restartCurrentLevel()" class="w-full py-3 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-heading font-bold text-base rounded-2xl shadow-lg transition">
+                <i class="fa-solid fa-rotate-right mr-1"></i> ลองใหม่อีกครั้ง
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /* ----------------------------------------------------------------------
+         * WEB AUDIO API SYNTHESIZER (Zero external audio file dependencies)
+         * ---------------------------------------------------------------------- */
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+            }
+
+            playPick() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.08);
+            }
+
+            playProcess() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.linearRampToValueAtTime(600, now + 0.15);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.15);
+            }
+
+            playDeliver() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(f, now + i * 0.05);
+                    gain.gain.setValueAtTime(0.15, now + i * 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.12);
+                    osc.connect(gain); gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.05); osc.stop(now + i * 0.05 + 0.12);
+                });
+            }
+
+            playError() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.setValueAtTime(110, now + 0.1);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.25);
+            }
+
+            playSpray() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const bufferSize = this.ctx.sampleRate * 0.15;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const output = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                const whiteNoise = this.ctx.createBufferSource();
+                whiteNoise.buffer = buffer;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.value = 1200;
+                const gain = this.ctx.createGain();
+                gain.gain.setValueAtTime(0.12, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                whiteNoise.connect(filter); filter.connect(gain); gain.connect(this.ctx.destination);
+                whiteNoise.start(now);
+            }
+
+            playAlarm() {
+                if (!this.enabled) return;
+                this.init(); if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(880, now);
+                osc.frequency.setValueAtTime(440, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                osc.connect(gain); gain.connect(this.ctx.destination);
+                osc.start(now); osc.stop(now + 0.2);
+            }
+        }
+
+        const sounds = new SoundEngine();
+
+        /* ----------------------------------------------------------------------
+         * GAME STATE & CONSTANTS
+         * ---------------------------------------------------------------------- */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let currentLevel = 1;
+        let gameState = 'START'; // START, PLAYING, PAUSED, SUCCESS, FAILED
+        let score = 0;
+        let deliveredCount = 0;
+        let targetDeliveries = 3;
+        let lastTime = 0;
+
+        // Overheat & Fire variables
+        let serverHeat = 0; // 0 - 100
+        let isFireActive = false;
+        let fireExtinguishProgress = 0; // 0 - 100
+        let heatBuildSpeed = 1.2; // % per second in level 3
+
+        // Player Data
+        const player = {
+            x: 400,
+            y: 160,
+            width: 38,
+            height: 38,
+            speed: 210,
+            direction: 'down', // down, up, left, right
+            isWalking: false,
+            animTimer: 0,
+            holdingItem: null // null or { type: 'fileA'|'fileB'|'extinguisher', step: 1|2|3 }
+        };
+
+        // Keyboard State
+        const keys = {
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+            action: false,
+            drop: false
+        };
+
+        // Floor Dropped Items Array [{ id, type, step, x, y }]
+        let droppedItems = [];
+
+        // Dynamic Tickets Array
+        let tickets = [];
+        let ticketSpawnTimer = 0;
+
+        /* WORKSTATION DEFINITIONS (World Coordinates & Boundaries) */
+        const workstations = [
+            { id: 'rawA', name: 'แท่นแฟ้ม A (ทั่วไป)', x: 60, y: 50, w: 90, h: 65, color: '#0284c7', bg: '#f0f9ff', type: 'SOURCE_A', icon: '📂' },
+            { id: 'rawB', name: 'แท่นแฟ้ม B (การเงิน)', x: 170, y: 50, w: 90, h: 65, color: '#9333ea', bg: '#faf5ff', type: 'SOURCE_B', icon: '📁' },
+            { id: 'scan', name: 'โต๊ะสแกนตรวจ (Step 2)', x: 380, y: 50, w: 140, h: 65, color: '#4f46e5', bg: '#eef2ff', type: 'SCAN', icon: '🔍', processingItem: null, progress: 0 },
+            { id: 'encrypt', name: 'โต๊ะผูกรหัส (Step 3)', x: 60, y: 320, w: 90, h: 140, color: '#7c3aed', bg: '#faf5ff', type: 'ENCRYPT', icon: '🔐', processingItem: null, progress: 0 },
+            { id: 'deliver', name: 'โต๊ะส่งมอบงาน (Step 4)', x: 750, y: 320, w: 90, h: 140, color: '#059669', bg: '#ecfdf5', type: 'DELIVER', icon: '🚀' },
+            { id: 'extinguisher', name: 'แท่นถังดับเพลิง', x: 750, y: 50, w: 90, h: 65, color: '#e11d48', bg: '#fff1f2', type: 'FIRE_EXT', icon: '🧯' },
+            { id: 'restL', name: 'โต๊ะวางพัก (ซ้าย)', x: 60, y: 200, w: 90, h: 65, color: '#94a3b8', bg: '#f8fafc', type: 'REST', storedItem: null },
+            { id: 'restR', name: 'โต๊ะวางพัก (ขวา)', x: 750, y: 200, w: 90, h: 65, color: '#94a3b8', bg: '#f8fafc', type: 'REST', storedItem: null },
+            { id: 'server', name: 'ตู้เซิร์ฟเวอร์หลัก', x: 370, y: 220, w: 160, h: 150, color: '#64748b', bg: '#ffffff', type: 'SERVER', icon: '🖥️' }
+        ];
+
+        /* ----------------------------------------------------------------------
+         * KEYBOARD INPUT LISTENERS (Full Thai Layout & Code Mapping)
+         * ---------------------------------------------------------------------- */
+        window.addEventListener('keydown', (e) => {
+            // Prevent scrolling on Spacebar and Arrow Keys
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+                e.preventDefault();
+            }
+
+            const k = e.key ? e.key.toLowerCase() : '';
+            const code = e.code;
+
+            // Movement - UP (W, ArrowUp, ไ)
+            if (code === 'KeyW' || code === 'ArrowUp' || k === 'w' || k === 'ไ') keys.up = true;
+            // Movement - DOWN (S, ArrowDown, ห)
+            if (code === 'KeyS' || code === 'ArrowDown' || k === 's' || k === 'ห') keys.down = true;
+            // Movement - LEFT (A, ArrowLeft, ฟ)
+            if (code === 'KeyA' || code === 'ArrowLeft' || k === 'a' || k === 'ฟ') keys.left = true;
+            // Movement - RIGHT (D, ArrowRight, ก)
+            if (code === 'KeyD' || code === 'ArrowRight' || k === 'd' || k === 'ก') keys.right = true;
+
+            // Action - Spacebar, Key E, ย, ำ
+            if (code === 'Space' || code === 'KeyE' || k === 'e' || k === 'ำ' || k === 'ย') {
+                if (!keys.action) handleInteraction();
+                keys.action = true;
+            }
+
+            // Drop Item - T, Q, X, ะ, ธ, ๆ, ป
+            if (code === 'KeyT' || code === 'KeyQ' || code === 'KeyX' || ['t','q','x','ะ','ธ','ๆ','ป'].includes(k)) {
+                if (!keys.drop) handleDropAction();
+                keys.drop = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            const k = e.key ? e.key.toLowerCase() : '';
+            const code = e.code;
+
+            if (code === 'KeyW' || code === 'ArrowUp' || k === 'w' || k === 'ไ') keys.up = false;
+            if (code === 'KeyS' || code === 'ArrowDown' || k === 's' || k === 'ห') keys.down = false;
+            if (code === 'KeyA' || code === 'ArrowLeft' || k === 'a' || k === 'ฟ') keys.left = false;
+            if (code === 'KeyD' || code === 'ArrowRight' || k === 'd' || k === 'ก') keys.right = false;
+
+            if (code === 'Space' || code === 'KeyE' || k === 'e' || k === 'ำ' || k === 'ย') keys.action = false;
+            if (code === 'KeyT' || code === 'KeyQ' || code === 'KeyX' || ['t','q','x','ะ','ธ','ๆ','ป'].includes(k)) keys.drop = false;
+        });
+
+        window.addEventListener('click', () => { window.focus(); });
+
+        /* ----------------------------------------------------------------------
+         * GAME INTERACTION & LOGIC SYSTEM
+         * ---------------------------------------------------------------------- */
+
+        // Helper: Check proximity between player and workstation
+        function getNearbyStation() {
+            const pCenterX = player.x + player.width / 2;
+            const pCenterY = player.y + player.height / 2;
+
+            for (let st of workstations) {
+                // Expanded touch/interaction boundary
+                if (pCenterX >= st.x - 20 && pCenterX <= st.x + st.w + 20 &&
+                    pCenterY >= st.y - 20 && pCenterY <= st.y + st.h + 20) {
+                    return st;
+                }
+            }
+            return null;
+        }
+
+        // Helper: Check proximity to dropped items on floor
+        function getNearbyDroppedItem() {
+            const pCenterX = player.x + player.width / 2;
+            const pCenterY = player.y + player.height / 2;
+
+            for (let i = 0; i < droppedItems.length; i++) {
+                const item = droppedItems[i];
+                const dist = Math.hypot(pCenterX - item.x, pCenterY - item.y);
+                if (dist < 35) {
+                    return { item, index: i };
+                }
+            }
+            return null;
+        }
+
+        // Action Trigger (Spacebar / E)
+        function handleInteraction() {
+            if (gameState !== 'PLAYING') return;
+
+            const station = getNearbyStation();
+            const nearbyDrop = getNearbyDroppedItem();
+
+            // 1. EXTINCTION / FIRE EMERGENCY LOGIC
+            if (isFireActive && station && station.id === 'server') {
+                if (player.holdingItem && player.holdingItem.type === 'extinguisher') {
+                    // Spray Fire Extinguisher
+                    sounds.playSpray();
+                    fireExtinguishProgress += 25;
+                    createParticles(station.x + station.w/2, station.y + station.h/2, '#ffffff', 10);
+                    showFloatingMessage("🧯 กำลังฉีดดับไฟเซิร์ฟเวอร์!", "info");
+
+                    if (fireExtinguishProgress >= 100) {
+                        isFireActive = false;
+                        serverHeat = 10;
+                        fireExtinguishProgress = 0;
+                        document.body.classList.remove('alarm-active');
+                        sounds.playDeliver();
+                        showFloatingMessage("🎉 ดับไฟสำเร็จ! เซิร์ฟเวอร์ปลอดภัยแล้ว", "success");
+                    }
+                    return;
+                } else {
+                    sounds.playError();
+                    showFloatingMessage("⚠️ ไฟกำลังลุก! ไปหยิบถังดับเพลิง 🧯 มาฉีดก่อน!", "warning");
+                    return;
+                }
+            }
+
+            // 2. INTERACTION WITH STATIONS
+            if (station) {
+                
+                // --- SOURCE A (Raw File A) ---
+                if (station.type === 'SOURCE_A') {
+                    if (!player.holdingItem) {
+                        player.holdingItem = { type: 'fileA', step: 1, id: 'FA-' + Date.now().toString().slice(-4) };
+                        sounds.playPick();
+                        showFloatingMessage("หยิบดิบ: แฟ้ม A (สีฟ้า) ➔ นำไป 'สแกน' ต่อ", "info");
+                    } else if (player.holdingItem.type === 'extinguisher') {
+                        // Swap back
+                        player.holdingItem = { type: 'fileA', step: 1, id: 'FA-' + Date.now().toString().slice(-4) };
+                        sounds.playPick();
+                    } else {
+                        showFloatingMessage("มือไม่ว่าง! วางของในมือก่อน (กด T)", "warning");
+                    }
+                    return;
+                }
+
+                // --- SOURCE B (Raw File B) ---
+                if (station.type === 'SOURCE_B') {
+                    if (!player.holdingItem) {
+                        player.holdingItem = { type: 'fileB', step: 1, id: 'FB-' + Date.now().toString().slice(-4) };
+                        sounds.playPick();
+                        showFloatingMessage("หยิบดิบ: แฟ้ม B (สีม่วง) ➔ นำไป 'สแกน' ต่อ", "info");
+                    } else {
+                        showFloatingMessage("มือไม่ว่าง! วางของในมือก่อน (กด T)", "warning");
+                    }
+                    return;
+                }
+
+                // --- SCAN STATION (Step 2) ---
+                if (station.type === 'SCAN') {
+                    if (station.processingItem) {
+                        // Collect finished scanned item
+                        if (!player.holdingItem && station.progress >= 100) {
+                            player.holdingItem = station.processingItem;
+                            station.processingItem = null;
+                            station.progress = 0;
+                            sounds.playPick();
+                            showFloatingMessage("สแกนเสร็จแล้ว! ➔ นำไป 'ผูกรหัส' (Step 3)", "success");
+                        } else if (station.progress < 100) {
+                            showFloatingMessage("⏳ กำลังสแกนข้อมูล... กรุณารอสักครู่", "info");
+                        }
+                    } else if (player.holdingItem) {
+                        if (player.holdingItem.step === 1) {
+                            // Valid Step 2 entry
+                            station.processingItem = player.holdingItem;
+                            player.holdingItem = null;
+                            station.progress = 0;
+                            sounds.playProcess();
+                            showFloatingMessage("เริ่มสแกนข้อมูล... 🔍", "info");
+                        } else {
+                            // Incorrect Step Warning (Decomposition Enforcement)
+                            sounds.playError();
+                            showFloatingMessage(`❌ ข้ามขั้นตอนไม่ได้! แฟ้มนี้อยู่ใน Step ${player.holdingItem.step}`, "warning");
+                        }
+                    }
+                    return;
+                }
+
+                // --- ENCRYPT STATION (Step 3) ---
+                if (station.type === 'ENCRYPT') {
+                    if (station.processingItem) {
+                        if (!player.holdingItem && station.progress >= 100) {
+                            player.holdingItem = station.processingItem;
+                            station.processingItem = null;
+                            station.progress = 0;
+                            sounds.playPick();
+                            showFloatingMessage("ผูกรหัสเสร็จแล้ว! ➔ นำไป 'ส่งมอบ' (Step 4)", "success");
+                        } else if (station.progress < 100) {
+                            showFloatingMessage("⏳ กำลังผูกรหัสความปลอดภัย...", "info");
+                        }
+                    } else if (player.holdingItem) {
+                        if (player.holdingItem.step === 2) {
+                            // Valid Step 3 entry
+                            station.processingItem = player.holdingItem;
+                            player.holdingItem = null;
+                            station.progress = 0;
+                            sounds.playProcess();
+                            showFloatingMessage("เริ่มผูกรหัสความปลอดภัย... 🔐", "info");
+                        } else {
+                            sounds.playError();
+                            if (player.holdingItem.step === 1) {
+                                showFloatingMessage("❌ ต้องนำไป 'สแกน' (Step 2) ก่อน!", "warning");
+                            } else {
+                                showFloatingMessage("❌ แฟ้มนี้ผูกรหัสเสร็จแล้ว!", "warning");
+                            }
+                        }
+                    }
+                    return;
+                }
+
+                // --- DELIVERY STATION (Step 4) ---
+                if (station.type === 'DELIVER') {
+                    if (player.holdingItem) {
+                        if (player.holdingItem.step === 3) {
+                            // SUCCESSFUL DELIVERY
+                            const deliveredType = player.holdingItem.type;
+                            player.holdingItem = null;
+                            deliveredCount++;
+                            score += 100;
+                            sounds.playDeliver();
+                            createParticles(station.x + station.w/2, station.y + station.h/2, '#10b981', 15);
+                            showFloatingMessage("🎉 ส่งมอบงานสำเร็จ! +100 คะแนน", "success");
+
+                            // Check Ticket Fulfillment
+                            fulfillMatchingTicket(deliveredType);
+                            updateHUD();
+
+                            if (deliveredCount >= targetDeliveries) {
+                                triggerLevelSuccess();
+                            }
+                        } else {
+                            sounds.playError();
+                            showFloatingMessage("❌ ข้อมูลยังประมวลผลไม่เสร็จ! ต้องผ่าน Step 1➔2➔3 ก่อน", "warning");
+                        }
+                    }
+                    return;
+                }
+
+                // --- FIRE EXTINGUISHER STATION ---
+                if (station.type === 'FIRE_EXT') {
+                    if (!player.holdingItem) {
+                        player.holdingItem = { type: 'extinguisher' };
+                        sounds.playPick();
+                        showFloatingMessage("ถือถังดับเพลิง 🧯 ➔ วิ่งไปฉีดที่ตู้เซิร์ฟเวอร์", "info");
+                    } else if (player.holdingItem.type !== 'extinguisher') {
+                        // AUTO-SWAP FEATURE
+                        dropItemToFloor(player.holdingItem);
+                        player.holdingItem = { type: 'extinguisher' };
+                        sounds.playPick();
+                        showFloatingMessage("วางแฟ้มลงพื้นอัตโนมัติ & ถือถังดับเพลิง 🧯", "info");
+                    }
+                    return;
+                }
+
+                // --- REST TABLES ---
+                if (station.type === 'REST') {
+                    if (!station.storedItem && player.holdingItem && player.holdingItem.type !== 'extinguisher') {
+                        station.storedItem = player.holdingItem;
+                        player.holdingItem = null;
+                        sounds.playProcess();
+                        showFloatingMessage("ฝากแฟ้มไว้บนโต๊ะพักเรียบร้อย", "info");
+                    } else if (station.storedItem && !player.holdingItem) {
+                        player.holdingItem = station.storedItem;
+                        station.storedItem = null;
+                        sounds.playPick();
+                        showFloatingMessage("หยิบแฟ้มจากโต๊ะพัก", "info");
+                    }
+                    return;
+                }
+            }
+
+            // 3. PICK UP DROPPED ITEMS FROM FLOOR
+            if (nearbyDrop && !player.holdingItem) {
+                player.holdingItem = nearbyDrop.item;
+                droppedItems.splice(nearbyDrop.index, 1);
+                sounds.playPick();
+                showFloatingMessage("หยิบของจากพื้นขึ้นมาแล้ว", "info");
+            }
+        }
+
+        // Drop Action Trigger (T / Q / X / On-screen Button)
+        function handleDropAction() {
+            if (gameState !== 'PLAYING' || !player.holdingItem) return;
+
+            if (player.holdingItem.type === 'extinguisher') {
+                // Return extinguisher to station or clear
+                player.holdingItem = null;
+                sounds.playPick();
+                showFloatingMessage("เก็บถังดับเพลิงเข้าที่", "info");
+            } else {
+                dropItemToFloor(player.holdingItem);
+                player.holdingItem = null;
+                sounds.playPick();
+                showFloatingMessage("📦 วางของลงพื้นข้างตัว (กด Space เพื่อหยิบคืน)", "info");
+            }
+        }
+
+        function dropItemToFloor(item) {
+            droppedItems.push({
+                ...item,
+                x: player.x + player.width / 2,
+                y: player.y + player.height + 10
+            });
+        }
+
+        // Dynamic Notification Bubble
+        let floatMsgTimer = null;
+        function showFloatingMessage(msg, type = 'info') {
+            const el = document.getElementById('float-msg');
+            const txt = document.getElementById('float-msg-text');
+            const icon = document.getElementById('float-msg-icon');
+
+            txt.innerText = msg;
+            if (type === 'warning') {
+                icon.className = "fa-solid fa-triangle-exclamation text-amber-400";
+            } else if (type === 'success') {
+                icon.className = "fa-solid fa-circle-check text-emerald-400";
+            } else {
+                icon.className = "fa-solid fa-circle-info text-cyan-400";
+            }
+
+            el.classList.remove('opacity-0', '-translate-y-2');
+            el.classList.add('opacity-100', 'translate-y-0');
+
+            if (floatMsgTimer) clearTimeout(floatMsgTimer);
+            floatMsgTimer = setTimeout(() => {
+                el.classList.remove('opacity-100', 'translate-y-0');
+                el.classList.add('opacity-0', '-translate-y-2');
+            }, 2600);
+        }
+
+        /* ----------------------------------------------------------------------
+         * TICKET ORDER QUEUE & PARALLEL PROCESSING
+         * ---------------------------------------------------------------------- */
+        function spawnTicket() {
+            if (tickets.length >= 4) return;
+
+            const type = (currentLevel === 1) ? 'fileA' : (Math.random() < 0.5 ? 'fileA' : 'fileB');
+            const newTicket = {
+                id: 'T-' + Math.floor(Math.random() * 900 + 100),
+                type: type,
+                maxTime: currentLevel === 3 ? 35 : 45,
+                timeLeft: currentLevel === 3 ? 35 : 45
+            };
+            tickets.push(newTicket);
+            renderTicketsUI();
+        }
+
+        function fulfillMatchingTicket(deliveredType) {
+            const idx = tickets.findIndex(t => t.type === deliveredType);
+            if (idx !== -1) {
+                tickets.splice(idx, 1);
+                renderTicketsUI();
+            }
+        }
+
+        function renderTicketsUI() {
+            const container = document.getElementById('tickets-container');
+            const countEl = document.getElementById('ticket-count');
+            countEl.innerText = `${tickets.length} Active`;
+
+            if (tickets.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-slate-500 py-6 text-xs">
+                        <i class="fa-solid fa-circle-check text-slate-600 text-2xl mb-1 block"></i>
+                        ไม่มีคำขอค้างในคิว
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = tickets.map(t => {
+                const pct = Math.max(0, (t.timeLeft / t.maxTime) * 100);
+                const isA = t.type === 'fileA';
+                const badgeBg = isA ? 'bg-sky-900/60 border-sky-500 text-sky-300' : 'bg-purple-900/60 border-purple-500 text-purple-300';
+                const barBg = pct > 40 ? 'bg-cyan-400' : 'bg-rose-500';
+
+                return `
+                <div class="bg-slate-800 p-2.5 rounded-xl border border-slate-700 text-xs space-y-1.5 shadow">
+                    <div class="flex items-center justify-between">
+                        <span class="px-2 py-0.5 rounded border text-[11px] font-bold ${badgeBg}">
+                            ${isA ? '📂 แฟ้ม A (ทั่วไป)' : '📁 แฟ้ม B (การเงิน)'}
+                        </span>
+                        <span class="font-heading font-bold text-slate-400">${Math.ceil(t.timeLeft)}s</span>
+                    </div>
+                    <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden">
+                        <div class="${barBg} h-full transition-all duration-300" style="width: ${pct}%"></div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        /* ----------------------------------------------------------------------
+         * LEVEL CONTROL & PROGRESSION
+         * ---------------------------------------------------------------------- */
+        function startLevel(lvl) {
+            currentLevel = lvl;
+            deliveredCount = 0;
+            score = 0;
+            serverHeat = 0;
+            isFireActive = false;
+            fireExtinguishProgress = 0;
+            tickets = [];
+            droppedItems = [];
+
+            player.x = 400;
+            player.y = 160;
+            player.holdingItem = null;
+
+            // Workstation resets
+            workstations.forEach(w => {
+                if (w.processingItem) w.processingItem = null;
+                if (w.storedItem) w.storedItem = null;
+                w.progress = 0;
+            });
+
+            // Target setup
+            if (lvl === 1) {
+                targetDeliveries = 3;
+                document.getElementById('hud-level-badge').innerText = 'ด่าน 1: เรียนรู้สายการผลิต';
+                document.getElementById('cs-live-tip').innerHTML = `
+                    • <b>Decomposition:</b> ทำตามลำดับ 4 ขั้นตอน: 1.ดิบ ➔ 2.สแกน ➔ 3.ผูกรหัส ➔ 4.ส่งมอบ<br>
+                    • สังเกตขั้นตอนบนโต๊ะให้ดี`;
+            } else if (lvl === 2) {
+                targetDeliveries = 5;
+                document.getElementById('hud-level-badge').innerText = 'ด่าน 2: จัดการงานคู่ขนาน';
+                document.getElementById('cs-live-tip').innerHTML = `
+                    • <b>Pattern Recognition:</b> แฟ้ม A และ B ใช้วิธีประมวลผลเหมือนกัน<br>
+                    • บริหารสายการผลิตแบบสลับฟันปลาเพื่อประหยัดเวลา!`;
+            } else if (lvl === 3) {
+                targetDeliveries = 6;
+                document.getElementById('hud-level-badge').innerText = 'ด่าน 3: สภาวะวิกฤต (Panic)';
+                document.getElementById('cs-live-tip').innerHTML = `
+                    • <b>Conditional Algorithm & Priority:</b> หากเกิดไฟลุก ให้หยุดงานปกติ วางของลงพื้น แล้วนำถังดับเพลิงไปดับก่อน!`;
+            }
+
+            // Spawn initial tickets
+            spawnTicket();
+            if (lvl >= 2) spawnTicket();
+
+            updateHUD();
+            document.getElementById('modal-start').classList.add('hidden');
+            document.getElementById('modal-success').classList.add('hidden');
+            document.getElementById('modal-failed').classList.add('hidden');
+            document.getElementById('modal-pause').classList.add('hidden');
+
+            gameState = 'PLAYING';
+            window.focus();
+        }
+
+        function triggerLevelSuccess() {
+            gameState = 'SUCCESS';
+            sounds.playDeliver();
+
+            const body = document.getElementById('success-cs-body');
+            if (currentLevel === 1) {
+                body.innerHTML = `
+                    <p>✅ <b>Decomposition (การย่อยปัญหา):</b> คุณได้เรียนรู้ว่าข้อมูลไม่สามารถส่งมอบได้ทันที ต้องถูกย่อยเป็น 4 สเต็ปย่อยตามลำดับ</p>
+                    <p>✅ <b>Algorithm (ขั้นตอนวิธี):</b> หากทำผิดลำดับ ระบบจะไม่ยินยอมให้ผ่าน</p>`;
+            } else if (currentLevel === 2) {
+                body.innerHTML = `
+                    <p>✅ <b>Pattern Recognition (การหารูปแบบ):</b> แม้แฟ้ม A และ B จะเป็นคนละประเภท แต่มันใช้รูปแบบขั้นตอนทำงานเดียวกันทั้งหมด</p>
+                    <p>✅ <b>Parallel Processing:</b> การสลับเอาแฟ้มที่สองไปสแกนขณะรอแฟ้มแรกผูกรหัส ช่วยให้งานเสร็จเร็วขึ้นเท่าตัว!</p>`;
+            } else {
+                body.innerHTML = `
+                    <p>✅ <b>Abstraction & Priority Queue:</b> คุณแยกแยะได้ว่า ความเสี่ยงจากการระเบิดของเซิร์ฟเวอร์มีระดับความสำคัญสูงกว่าการส่งงานช้า</p>
+                    <p>✅ <b>Conditional Logic:</b> ถ้า (เกิดไฟไหม้) ➔ สลับไปดับไฟก่อนวิกฤตจะลุกลาม!</p>`;
+            }
+
+            document.getElementById('modal-success').classList.remove('hidden');
+        }
+
+        function triggerGameOver(reason) {
+            gameState = 'FAILED';
+            sounds.playError();
+            document.getElementById('fail-reason').innerText = reason;
+            document.getElementById('modal-failed').classList.remove('hidden');
+        }
+
+        function nextLevelAction() {
+            if (currentLevel < 3) {
+                startLevel(currentLevel + 1);
+            } else {
+                // Completed all levels
+                startLevel(1);
+            }
+        }
+
+        function restartCurrentLevel() {
+            startLevel(currentLevel);
+        }
+
+        function togglePause() {
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                document.getElementById('modal-pause').classList.remove('hidden');
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                document.getElementById('modal-pause').classList.add('hidden');
+            }
+        }
+
+        function toggleSound() {
+            sounds.enabled = !sounds.enabled;
+            document.getElementById('sound-icon').className = sounds.enabled ? 'fa-solid fa-volume-high text-xs' : 'fa-solid fa-volume-xmark text-xs text-rose-400';
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-score').innerText = score;
+            document.getElementById('hud-target').innerText = `${deliveredCount}/${targetDeliveries}`;
+
+            const heatBar = document.getElementById('hud-heat-bar');
+            const heatVal = document.getElementById('hud-heat-val');
+            const heatIcon = document.getElementById('heat-icon');
+
+            const clampedHeat = Math.min(100, Math.floor(serverHeat));
+            heatBar.style.width = `${clampedHeat}%`;
+            heatVal.innerText = `${clampedHeat}%`;
+
+            if (clampedHeat > 70 || isFireActive) {
+                heatBar.className = "bg-rose-500 h-full transition-all duration-300";
+                heatIcon.className = "fa-solid fa-fire text-rose-500 animate-bounce";
+            } else if (clampedHeat > 40) {
+                heatBar.className = "bg-amber-400 h-full transition-all duration-300";
+                heatIcon.className = "fa-solid fa-temperature-high text-amber-400";
+            } else {
+                heatBar.className = "bg-cyan-400 h-full transition-all duration-300";
+                heatIcon.className = "fa-solid fa-temperature-half text-cyan-400";
+            }
+        }
+
+        /* ----------------------------------------------------------------------
+         * MAIN GAME LOOP & PHYSICS UPDATE
+         * ---------------------------------------------------------------------- */
+        function update(dt) {
+            if (gameState !== 'PLAYING') return;
+
+            // 1. PLAYER MOVEMENT & COLLISION BOUNDS
+            let dx = 0;
+            let dy = 0;
+
+            if (keys.up) { dy -= 1; player.direction = 'up'; }
+            if (keys.down) { dy += 1; player.direction = 'down'; }
+            if (keys.left) { dx -= 1; player.direction = 'left'; }
+            if (keys.right) { dx += 1; player.direction = 'right'; }
+
+            player.isWalking = (dx !== 0 || dy !== 0);
+
+            if (player.isWalking) {
+                // Normalize diagonal vector
+                const len = Math.hypot(dx, dy);
+                dx = (dx / len) * player.speed * dt;
+                dy = (dy / len) * player.speed * dt;
+
+                const nextX = player.x + dx;
+                const nextY = player.y + dy;
+
+                // Canvas boundaries
+                if (nextX >= 40 && nextX <= canvas.width - 40 - player.width) {
+                    player.x = nextX;
+                }
+                if (nextY >= 40 && nextY <= canvas.height - 40 - player.height) {
+                    player.y = nextY;
+                }
+
+                player.animTimer += dt * 10;
+            }
+
+            // 2. WORKSTATION PROCESSING TIMERS (Step 2 & Step 3)
+            workstations.forEach(st => {
+                if (st.processingItem && st.progress < 100) {
+                    st.progress += dt * 35; // ~2.8 seconds per process
+                    if (st.progress >= 100) {
+                        st.progress = 100;
+                        // Advance Item Step
+                        st.processingItem.step += 1;
+                        sounds.playProcess();
+                    }
+                }
+            });
+
+            // 3. LEVEL 3 SERVER OVERHEAT & FIRE DYNAMICS
+            if (currentLevel === 3) {
+                if (!isFireActive) {
+                    serverHeat += dt * heatBuildSpeed;
+                    if (serverHeat >= 100) {
+                        serverHeat = 100;
+                        isFireActive = true;
+                        document.body.classList.add('alarm-active');
+                        sounds.playAlarm();
+                        showFloatingMessage("🚨 วิกฤต! ไฟลุกไหม้เซิร์ฟเวอร์! รีบหยิบถังดับเพลิง 🧯 ดับด่วน!", "warning");
+                    }
+                } else {
+                    // Fire is active! If not extinguished in time -> Explode
+                    serverHeat = 100;
+                    // Penalty check timer
+                }
+            }
+
+            // 4. TICKETS TIMERS UPDATE
+            ticketSpawnTimer += dt;
+            if (ticketSpawnTimer >= (currentLevel === 1 ? 12 : 8)) {
+                ticketSpawnTimer = 0;
+                spawnTicket();
+            }
+
+            for (let i = tickets.length - 1; i >= 0; i--) {
+                tickets[i].timeLeft -= dt;
+                if (tickets[i].timeLeft <= 0) {
+                    // Ticket Expired Penalty
+                    tickets.splice(i, 1);
+                    score = Math.max(0, score - 30);
+                    sounds.playError();
+                    showFloatingMessage("⚠️ คำขอหมดอายุ! -30 คะแนน", "warning");
+                }
+            }
+
+            updateHUD();
+            renderTicketsUI();
+        }
+
+        /* ----------------------------------------------------------------------
+         * EYE-FRIENDLY MODERN LAB CANVAS GRAPHICS RENDERER
+         * ---------------------------------------------------------------------- */
+        function render() {
+            // Clear background
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. LAB WALL UPPER SECTION (#cbd5e1)
+            ctx.fillStyle = '#cbd5e1';
+            ctx.fillRect(0, 0, canvas.width, 40);
+
+            // Upper Wall LED Lights & Details
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillRect(0, 36, canvas.width, 4); // Wall trim
+
+            for (let x = 80; x < canvas.width; x += 160) {
+                ctx.fillStyle = '#64748b';
+                ctx.fillRect(x, 10, 40, 15); // Vent
+                ctx.fillStyle = '#10b981';
+                ctx.beginPath(); ctx.arc(x + 8, 17, 3, 0, Math.PI * 2); ctx.fill(); // Green LED
+            }
+
+            // 2. FLOOR TILES (#f8fafc with subtle grid lines #e2e8f0)
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 40, canvas.width, canvas.height - 40);
+
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            const tileSize = 40;
+            for (let x = 0; x < canvas.width; x += tileSize) {
+                ctx.beginPath(); ctx.moveTo(x, 40); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 40; y < canvas.height; y += tileSize) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            // Translucent Conduit Paths
+            ctx.strokeStyle = 'rgba(14, 165, 233, 0.2)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(105, 115); ctx.lineTo(105, 320);
+            ctx.moveTo(450, 115); ctx.lineTo(450, 220);
+            ctx.moveTo(795, 115); ctx.lineTo(795, 320);
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset line dash
+
+            // Server Warning Danger Zone Boundary
+            ctx.strokeStyle = isFireActive ? 'rgba(225, 29, 72, 0.8)' : 'rgba(245, 158, 11, 0.4)';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.strokeRect(350, 200, 200, 190);
+            ctx.setLineDash([]);
+
+            // 3. WORKSTATIONS RENDER
+            workstations.forEach(st => {
+                // Box background
+                ctx.fillStyle = st.bg;
+                ctx.strokeStyle = st.color;
+                ctx.lineWidth = 2.5;
+
+                // Rounded Rect Workstation
+                ctx.beginPath();
+                ctx.roundRect(st.x, st.y, st.w, st.h, 12);
+                ctx.fill();
+                ctx.stroke();
+
+                // Special Graphics for Server
+                if (st.id === 'server') {
+                    ctx.fillStyle = '#334155';
+                    ctx.fillRect(st.x + 15, st.y + 15, st.w - 30, st.h - 30);
+
+                    // LED Blinking Lights
+                    const colors = ['#10b981', '#06b6d4', '#f59e0b', '#3b82f6'];
+                    for (let i = 0; i < 6; i++) {
+                        ctx.fillStyle = (Math.floor(Date.now() / 300) + i) % 2 === 0 ? colors[i % colors.length] : '#1e293b';
+                        ctx.fillRect(st.x + 25 + (i % 3) * 38, st.y + 30 + Math.floor(i / 3) * 30, 24, 12);
+                    }
+
+                    // Fire Graphic overlay if Fire Active
+                    if (isFireActive) {
+                        ctx.fillStyle = 'rgba(225, 29, 72, 0.3)';
+                        ctx.fillRect(st.x, st.y, st.w, st.h);
+
+                        // Animated Flames
+                        ctx.font = '36px Kanit';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('🔥', st.x + st.w/2 - 20, st.y + st.h/2 + 10);
+                        ctx.fillText('🔥', st.x + st.w/2 + 20, st.y + st.h/2 + 10);
+
+                        // Extinguish Progress Bar
+                        if (fireExtinguishProgress > 0) {
+                            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                            ctx.fillRect(st.x + 10, st.y - 15, st.w - 20, 10);
+                            ctx.fillStyle = '#38bdf8';
+                            ctx.fillRect(st.x + 10, st.y - 15, ((st.w - 20) * fireExtinguishProgress) / 100, 10);
+                        }
+                    }
+                } else {
+                    // Workstation Label & Icon
+                    ctx.font = 'bold 12px Kanit';
+                    ctx.fillStyle = st.color;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(st.name, st.x + st.w / 2, st.y + 18);
+
+                    if (st.icon) {
+                        ctx.font = '22px Kanit';
+                        ctx.fillText(st.icon, st.x + st.w / 2, st.y + 44);
+                    }
+
+                    // Render Stored Item on Table
+                    if (st.storedItem) {
+                        renderItemBubble(st.x + st.w/2, st.y + st.h/2 + 10, st.storedItem);
+                    }
+
+                    // Render Processing Item & Progress Bar
+                    if (st.processingItem) {
+                        renderItemBubble(st.x + st.w/2, st.y + 36, st.processingItem);
+
+                        // Progress Bar
+                        ctx.fillStyle = '#cbd5e1';
+                        ctx.fillRect(st.x + 10, st.y + st.h - 12, st.w - 20, 6);
+                        ctx.fillStyle = st.color;
+                        ctx.fillRect(st.x + 10, st.y + st.h - 12, ((st.w - 20) * st.progress) / 100, 6);
+                    }
+                }
+            });
+
+            // 4. DROPPED ITEMS ON FLOOR
+            droppedItems.forEach(item => {
+                renderItemBubble(item.x, item.y, item);
+            });
+
+            // 5. CARTOON TECHNICIAN CHARACTER
+            renderTechnician(player.x, player.y, player.direction, player.isWalking, player.animTimer);
+
+            // Carrying Item Bubble above Player
+            if (player.holdingItem) {
+                renderItemBubble(player.x + player.width / 2, player.y - 18, player.holdingItem, true);
+            }
+
+            // Particles Rendering
+            updateAndRenderParticles();
+        }
+
+        /* CARTOON TECHNICIAN DRAWING HELPER */
+        function renderTechnician(x, y, dir, isWalking, animTimer) {
+            ctx.save();
+            ctx.translate(x + 19, y + 19);
+
+            const bounce = isWalking ? Math.sin(animTimer) * 2.5 : 0;
+
+            // Feet / Brown Safety Shoes
+            ctx.fillStyle = '#451a03';
+            if (isWalking) {
+                ctx.fillRect(-12 + Math.sin(animTimer) * 4, 12, 8, 6);
+                ctx.fillRect(4 - Math.sin(animTimer) * 4, 12, 8, 6);
+            } else {
+                ctx.fillRect(-10, 12, 7, 6);
+                ctx.fillRect(3, 12, 7, 6);
+            }
+
+            // Dark Navy Pants
+            ctx.fillStyle = '#1e3a8a';
+            ctx.fillRect(-9, 4, 18, 10);
+
+            // Blue Polo Body with White Collar
+            ctx.fillStyle = '#0284c7';
+            ctx.fillRect(-11, -10 + bounce, 22, 15);
+
+            // White Collar
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-5, -10 + bounce, 10, 3);
+
+            // IT Badge
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(-2, -5 + bounce, 4, 5);
+
+            // Cute Face & Brown Hair
+            ctx.fillStyle = '#fde047'; // Skin base
+            ctx.beginPath(); ctx.arc(0, -16 + bounce, 10, 0, Math.PI * 2); ctx.fill();
+
+            // Hair
+            ctx.fillStyle = '#78350f';
+            ctx.beginPath(); ctx.arc(0, -18 + bounce, 10, Math.PI, Math.PI * 2); ctx.fill();
+
+            // Eyes depending on Direction
+            ctx.fillStyle = '#0f172a';
+            if (dir === 'down') {
+                ctx.fillRect(-4, -16 + bounce, 2.5, 3);
+                ctx.fillRect(2, -16 + bounce, 2.5, 3);
+            } else if (dir === 'left') {
+                ctx.fillRect(-6, -16 + bounce, 2.5, 3);
+            } else if (dir === 'right') {
+                ctx.fillRect(4, -16 + bounce, 2.5, 3);
+            }
+
+            ctx.restore();
+        }
+
+        /* ITEM BUBBLE GRAPHIC HELPER */
+        function renderItemBubble(x, y, item, isHolding = false) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            if (isHolding) {
+                // Bobbing animation for held items
+                ctx.translate(0, Math.sin(Date.now() / 200) * 2);
+            }
+
+            if (item.type === 'extinguisher') {
+                ctx.font = '20px Kanit';
+                ctx.textAlign = 'center';
+                ctx.fillText('🧯', 0, 5);
+            } else {
+                // File A or File B
+                const isA = item.type === 'fileA';
+                const bgCol = isA ? '#0284c7' : '#9333ea';
+
+                ctx.fillStyle = bgCol;
+                ctx.beginPath(); ctx.roundRect(-16, -12, 32, 24, 6); ctx.fill();
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.stroke();
+
+                // Step Badge Text
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 10px Kanit';
+                ctx.textAlign = 'center';
+                ctx.fillText(`S${item.step}`, 0, 4);
+            }
+
+            ctx.restore();
+        }
+
+        /* SIMPLE PARTICLE SYSTEM */
+        let particles = [];
+        function createParticles(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 120,
+                    vy: (Math.random() - 0.5) * 120,
+                    life: 0.5,
+                    color: color
+                });
+            }
+        }
+
+        function updateAndRenderParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                p.x += p.vx * 0.016;
+                p.y += p.vy * 0.016;
+                p.life -= 0.016;
+
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life / 0.5;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        /* ----------------------------------------------------------------------
+         * MAIN ANIMATION LOOP
+         * ---------------------------------------------------------------------- */
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+            lastTime = timestamp;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize on load
+        window.onload = () => {
+            renderTicketsUI();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
